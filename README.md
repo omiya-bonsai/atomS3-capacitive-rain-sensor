@@ -2,6 +2,8 @@
 
 M5AtomS3を使用した自動雨検知システムです。2本の導線を使った静電容量式センサーで雨を検知し、MQTT通信とPushover通知によってリアルタイムで雨情報をお知らせします。
 
+<img width="501" height="502" alt="スクリーンショット 2025-08-04 11 46 36" src="https://github.com/user-attachments/assets/58dad73d-e72d-491d-b473-0046595ba19a" />
+
 
 ## 📋 目次
 
