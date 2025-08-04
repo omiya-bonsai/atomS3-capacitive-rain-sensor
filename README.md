@@ -335,7 +335,7 @@ SOFTWARE.
 - **ArduinoJson** for JSON handling
 
 #### ハードウェア・販売プラットフォーム
-- **NAOTO** ([naoto64.2000@gmail.com](mailto:naoto64.2000@gmail.com)) for [静電容量式レインセンサ基板](https://www.switch-science.com/products/8202)
+- **NAOTO** for [静電容量式レインセンサ基板](https://www.switch-science.com/products/8202)
 - **スイッチサイエンス** for providing the marketplace and distribution platform
 
 #### AI開発支援
