@@ -291,7 +291,7 @@ void updateLEDStatus()                          // LED更新
 
 MIT License
 
-Copyright (c) 2025 omiya-bonsai with GitHub Copilot assisted development
+Copyright (c) 2025 omiya-bonsai 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
