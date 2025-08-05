@@ -4,6 +4,9 @@ M5AtomS3を使用した自動雨検知システムです。2本の導線を使�
 
 ![雨検知システム](https://img.shields.io/badge/Status-Production%20Ready-green) ![Arduino](https://img.shields.io/badge/Platform-Arduino-blue) ![ESP32](https://img.shields.io/badge/MCU-ESP32--S3-orange)
 
+<img width="501" height="502" alt="a" src="https://github.com/user-attachments/assets/28650388-753e-4202-bfaa-a2e7c17a6d79" />
+
+
 ## 📋 目次
 
 - [特徴](#特徴)
