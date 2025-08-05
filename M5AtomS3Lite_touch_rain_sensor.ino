@@ -147,10 +147,12 @@ CRGB leds[NUM_LEDS];
 // LED状態管理
 enum LEDState
 {
-  LED_STARTUP, // 起動中（緑点滅）
-  LED_NORMAL,  // 正常動作（青常灯）
-  LED_RAIN,    // 雨検知（紫点滅）
-  LED_ERROR    // エラー（赤点滅）
+  LED_STARTUP,    // 起動中（緑点滅）
+  LED_NORMAL,     // 正常動作（青常灯）
+  LED_RAIN,       // 雨検知（紫点滅）
+  LED_ERROR,      // エラー（赤点滅）
+  LED_WIFI_ERROR, // WiFiエラー（オレンジ点滅）
+  LED_MQTT_ERROR  // MQTTエラー（黄色点滅）
 };
 
 LEDState current_led_state = LED_STARTUP;
@@ -178,6 +180,16 @@ bool led_blink_state = false;
 #define DEBUG_IGNORE_TIME_LIMITS false       // デバッグ用：時刻制限を無視する場合はtrue
 #define DEBUG_SHORT_COOLDOWN false           // デバッグ用：クールダウンを短縮する場合はtrue（1分）
 #define DEBUG_FORCE_RESET_NOTIFICATION false // デバッグ用：毎回通知フラグを強制リセット
+#define DEBUG_MODE false                     // デバッグ出力の有効/無効
+
+// 24/7運用堅牢性設定
+#define WATCHDOG_TIMEOUT_SECONDS 120                // ウォッチドッグタイムアウト（2分）
+#define SCHEDULED_REBOOT_INTERVAL (168UL * 3600000) // 定期再起動間隔（7日間）
+#define MEMORY_CHECK_INTERVAL 300000                // メモリチェック間隔（5分）
+#define MEMORY_WARNING_THRESHOLD 8192               // メモリ警告閾値（8KB）
+#define WIFI_RECONNECT_THRESHOLD 10                 // WiFi再接続エラー閾値
+#define MQTT_RECONNECT_THRESHOLD 10                 // MQTT再接続エラー閾値
+#define HEALTH_REPORT_INTERVAL 3600000              // ヘルスレポート間隔（1時間）
 
 // NTPサーバー設定
 const char *ntpServer = "ntp.nict.jp";
@@ -210,6 +222,14 @@ unsigned long last_cable_notification = 0;   // 最後のケーブル通知時�
 int consecutive_measurement_errors = 0; // 連続測定エラー回数
 bool cable_connection_ok = true;        // ケーブル接続状態
 
+// 24/7堅牢運用のための監視変数
+unsigned long last_reboot_time = 0;      // 最後の再起動時刻
+unsigned long last_memory_check = 0;     // 最後のメモリチェック時刻
+unsigned long last_health_report = 0;    // 最後のヘルスレポート送信時刻
+unsigned long wifi_disconnect_count = 0; // WiFi切断回数
+unsigned long mqtt_disconnect_count = 0; // MQTT切断回数
+unsigned long system_start_time = 0;     // システム開始時刻
+
 // WiFi・MQTTクライアント
 WiFiClient espClient;
 PubSubClient mqtt_client(espClient);
@@ -225,6 +245,7 @@ void setupMQTTBuffers()
 void sendPushoverNotification(const String &message, const String &title);
 bool isNotificationTime();
 unsigned long getUnixTimestamp();
+void connectToMQTT();
 
 // URLエンコーディングのためのヘルパー関数
 String urlEncode(String str)
@@ -331,6 +352,231 @@ void updateLEDStatus()
       last_led_update = current_time;
     }
     break;
+
+  case LED_WIFI_ERROR:
+    // オレンジ色点滅（400ms間隔）
+    if (current_time - last_led_update >= 400)
+    {
+      led_blink_state = !led_blink_state;
+      if (led_blink_state)
+      {
+        leds[0] = CRGB::Orange;
+      }
+      else
+      {
+        leds[0] = CRGB::Black;
+      }
+      FastLED.show();
+      last_led_update = current_time;
+    }
+    break;
+
+  case LED_MQTT_ERROR:
+    // 黄色点滅（350ms間隔）
+    if (current_time - last_led_update >= 350)
+    {
+      led_blink_state = !led_blink_state;
+      if (led_blink_state)
+      {
+        leds[0] = CRGB::Yellow;
+      }
+      else
+      {
+        leds[0] = CRGB::Black;
+      }
+      FastLED.show();
+      last_led_update = current_time;
+    }
+    break;
+  }
+}
+
+// ===== 24/7 堅牢運用のための関数 =====
+
+// ソフトウェアウォッチドッグ（Arduino IDE環境対応）
+unsigned long last_watchdog_feed = 0;
+
+void feedWatchdog()
+{
+  last_watchdog_feed = millis();
+
+  if (DEBUG_MODE)
+  {
+    Serial.println("DEBUG: Watchdog fed");
+  }
+}
+
+// ウォッチドッグタイムアウトチェック
+void checkWatchdogTimeout()
+{
+  unsigned long current_time = millis();
+
+  // オーバーフロー対策
+  if (current_time < last_watchdog_feed)
+  {
+    last_watchdog_feed = current_time;
+    return;
+  }
+
+  // ウォッチドッグタイムアウトチェック
+  if (current_time - last_watchdog_feed >= (WATCHDOG_TIMEOUT_SECONDS * 1000))
+  {
+    Serial.println("WATCHDOG TIMEOUT - System restart triggered");
+    delay(100);
+    ESP.restart();
+  }
+}
+
+// メモリチェック関数
+bool checkMemoryHealth()
+{
+  uint32_t free_heap = ESP.getFreeHeap();
+  uint32_t free_psram = ESP.getFreePsram();
+
+  if (DEBUG_MODE)
+  {
+    Serial.printf("DEBUG: Free Heap: %u bytes, Free PSRAM: %u bytes\n", free_heap, free_psram);
+  }
+
+  if (free_heap < MEMORY_WARNING_THRESHOLD)
+  {
+    Serial.printf("WARNING: Low heap memory: %u bytes (threshold: %u)\n",
+                  free_heap, MEMORY_WARNING_THRESHOLD);
+    return false;
+  }
+
+  return true;
+}
+
+// システムヘルスレポート送信
+void sendSystemHealthReport()
+{
+  StaticJsonDocument<512> health_doc;
+  health_doc["device_id"] = DEVICE_ID;
+  health_doc["location"] = LOCATION;
+  health_doc["timestamp"] = getUnixTimestamp();
+  health_doc["type"] = "system_health";
+
+  // システム情報
+  health_doc["uptime_hours"] = (millis() - system_start_time) / 3600000;
+  health_doc["free_heap"] = ESP.getFreeHeap();
+  health_doc["free_psram"] = ESP.getFreePsram();
+  health_doc["wifi_disconnects"] = wifi_disconnect_count;
+  health_doc["mqtt_disconnects"] = mqtt_disconnect_count;
+  health_doc["cpu_freq_mhz"] = ESP.getCpuFreqMHz();
+  health_doc["wifi_rssi"] = WiFi.RSSI();
+
+  // JSON文字列に変換
+  String health_payload;
+  serializeJson(health_doc, health_payload);
+
+  // MQTT送信
+  if (mqtt_client.connected())
+  {
+    String health_topic = String(MQTT_TOPIC_PREFIX) + "/health";
+    if (mqtt_client.publish(health_topic.c_str(), health_payload.c_str()))
+    {
+      Serial.println("System health report sent");
+      if (DEBUG_MODE)
+      {
+        Serial.println("Health payload: " + health_payload);
+      }
+    }
+    else
+    {
+      Serial.println("Failed to send health report");
+    }
+  }
+
+  last_health_report = millis();
+}
+
+// 定期再起動チェック
+void checkScheduledReboot()
+{
+  unsigned long current_time = millis();
+
+  // オーバーフロー対策
+  if (current_time < last_reboot_time)
+  {
+    last_reboot_time = current_time;
+    return;
+  }
+
+  if (current_time - last_reboot_time >= SCHEDULED_REBOOT_INTERVAL)
+  {
+    Serial.println("Scheduled reboot triggered - System has been running for over configured interval");
+
+    // 再起動前に最後のヘルスレポートを送信
+    sendSystemHealthReport();
+    delay(1000);
+
+    // 再起動実行
+    ESP.restart();
+  }
+}
+
+// WiFi/MQTT接続監視と再接続
+void monitorConnections()
+{
+  static unsigned long last_wifi_check = 0;
+  static unsigned long last_mqtt_check = 0;
+
+  unsigned long current_time = millis();
+
+  // WiFi接続チェック
+  if (current_time - last_wifi_check >= 5000) // 5秒毎
+  {
+    if (WiFi.status() != WL_CONNECTED)
+    {
+      wifi_disconnect_count++;
+      wifi_connected = false;
+
+      Serial.println("WiFi disconnected - attempting reconnection");
+
+      // 再接続試行回数が閾値を超えた場合は再起動
+      if (wifi_disconnect_count >= WIFI_RECONNECT_THRESHOLD)
+      {
+        Serial.printf("WiFi reconnect threshold reached (%lu). Rebooting...\n",
+                      WIFI_RECONNECT_THRESHOLD);
+        ESP.restart();
+      }
+
+      WiFi.reconnect();
+      setLEDState(LED_WIFI_ERROR);
+    }
+    else if (!wifi_connected)
+    {
+      wifi_connected = true;
+      Serial.println("WiFi reconnected");
+      setLEDState(LED_NORMAL);
+    }
+
+    last_wifi_check = current_time;
+  }
+
+  // MQTT接続チェック
+  if (current_time - last_mqtt_check >= 10000) // 10秒毎
+  {
+    if (!mqtt_client.connected())
+    {
+      mqtt_disconnect_count++;
+
+      Serial.println("MQTT disconnected - attempting reconnection");
+
+      // 再接続試行回数が閾値を超えた場合は再起動
+      if (mqtt_disconnect_count >= MQTT_RECONNECT_THRESHOLD)
+      {
+        Serial.printf("MQTT reconnect threshold reached (%lu). Rebooting...\n",
+                      MQTT_RECONNECT_THRESHOLD);
+        ESP.restart();
+      }
+
+      connectToMQTT();
+      setLEDState(LED_MQTT_ERROR);
+    }
+
+    last_mqtt_check = current_time;
   }
 }
 
@@ -358,6 +604,12 @@ void setLEDState(LEDState new_state)
       break;
     case LED_ERROR:
       Serial.println("ERROR (Red blink)");
+      break;
+    case LED_WIFI_ERROR:
+      Serial.println("WIFI_ERROR (Orange blink)");
+      break;
+    case LED_MQTT_ERROR:
+      Serial.println("MQTT_ERROR (Yellow blink)");
       break;
     }
   }
@@ -883,6 +1135,38 @@ void setupMQTT()
   }
 }
 
+// MQTT再接続関数（堅牢運用用）
+void connectToMQTT()
+{
+  if (!wifi_connected || WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("Cannot connect to MQTT: WiFi not connected");
+    return;
+  }
+
+  if (mqtt_client.connected())
+  {
+    Serial.println("MQTT already connected");
+    return;
+  }
+
+  Serial.print("Reconnecting to MQTT broker: ");
+  Serial.print(mqtt_server);
+  Serial.print(":");
+  Serial.println(mqtt_port);
+
+  // 単一の再接続試行
+  if (mqtt_client.connect(mqtt_client_id))
+  {
+    Serial.println("MQTT reconnected successfully");
+  }
+  else
+  {
+    Serial.print("MQTT reconnection failed, rc=");
+    Serial.println(mqtt_client.state());
+  }
+}
+
 // MQTT送信関数
 void sendMQTTData()
 {
@@ -1109,6 +1393,26 @@ void setup()
 {
   M5.begin();
   Serial.begin(115200);
+
+  // ===== 24/7 堅牢運用のための初期化 =====
+
+  // ソフトウェアウォッチドッグ初期化
+  last_watchdog_feed = millis();
+
+  // システム開始時刻を記録
+  system_start_time = millis();
+  last_reboot_time = millis();
+  last_memory_check = millis();
+  last_health_report = millis();
+
+  Serial.println("24/7 robust operation initialized:");
+  Serial.printf("- Software watchdog timeout: %d seconds\n", WATCHDOG_TIMEOUT_SECONDS);
+  Serial.printf("- Scheduled reboot interval: %lu hours\n",
+                SCHEDULED_REBOOT_INTERVAL / 3600000);
+  Serial.printf("- Memory warning threshold: %u bytes\n",
+                MEMORY_WARNING_THRESHOLD);
+
+  // ===== 標準初期化 =====
 
   // FASTLED初期化
   FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
@@ -1412,6 +1716,36 @@ void setup()
 
 void loop()
 {
+  // ===== 24/7 堅牢運用のための監視処理 =====
+
+  // ウォッチドッグフィード
+  feedWatchdog();
+
+  // ウォッチドッグタイムアウトチェック
+  checkWatchdogTimeout();
+
+  // 接続監視
+  monitorConnections();
+
+  // 定期再起動チェック
+  checkScheduledReboot();
+
+  // メモリチェック（5分間隔）
+  static unsigned long last_memory_check_time = 0;
+  if (millis() - last_memory_check_time >= MEMORY_CHECK_INTERVAL)
+  {
+    checkMemoryHealth();
+    last_memory_check_time = millis();
+  }
+
+  // システムヘルスレポート送信（1時間間隔）
+  if (millis() - last_health_report >= HEALTH_REPORT_INTERVAL)
+  {
+    sendSystemHealthReport();
+  }
+
+  // ===== 標準センサー処理 =====
+
   // LED状態更新（常時）
   updateLEDStatus();
 

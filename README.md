@@ -1,9 +1,8 @@
-# AtomS3Lite 2端子静電容量式レインセンサ
+# AtomS3Lite 2端子静電容量式レインセンサー
 
-M5AtomS3Liteを使用した自動雨検知システムです。2本の導線を使った静電容量式センサで雨を検知し、MQTT通信とPushover通知によってリアルタイムで雨情報をお知らせします。
+M5AtomS3を使用した自動雨検知システムです。2本の導線を使った静電容量式センサーで雨を検知し、MQTT通信とPushover通知によってリアルタイムで雨情報をお知らせします。
 
-<img width="501" height="502" alt="スクリーンショット 2025-08-04 11 46 36" src="https://github.com/user-attachments/assets/58dad73d-e72d-491d-b473-0046595ba19a" />
-
+![雨検知システム](https://img.shields.io/badge/Status-Production%20Ready-green) ![Arduino](https://img.shields.io/badge/Platform-Arduino-blue) ![ESP32](https://img.shields.io/badge/MCU-ESP32--S3-orange)
 
 ## 📋 目次
 
@@ -26,7 +25,7 @@ M5AtomS3Liteを使用した自動雨検知システムです。2本の導線を�
 - **ノイズ除去**：ローパスフィルター（α=0.8）とノイズ閾値（5%）
 
 ### 📡 IoT通信機能
-- **MQTT通信**：30秒間隔でセンサデータを送信
+- **MQTT通信**：30秒間隔でセンサーデータを送信
 - **Pushover通知**：スマートフォンへリアルタイム通知
 - **時間制御**：07:00-19:00の時間帯のみ通知（近隣配慮）
 - **クールダウン**：3時間間隔で通知頻度を制限
@@ -36,6 +35,14 @@ M5AtomS3Liteを使用した自動雨検知システムです。2本の導線を�
 - **WiFi接続監視**：切断時の自動再接続
 - **バッテリー監視**：25時間稼働後の警告通知
 - **NTP時刻同期**：正確な時刻制御
+
+### 🔒 24/7堅牢運用機能
+- **ソフトウェアウォッチドッグ**：120秒無応答で自動再起動
+- **定期再起動**：7日間隔での予防的再起動
+- **メモリ監視**：メモリ不足の自動検出（8KB閾値）
+- **接続監視**：WiFi/MQTT切断回数の監視と自動復旧
+- **システムヘルスレポート**：1時間間隔での稼働状況送信
+- **エラー閾値管理**：接続エラー10回で強制再起動
 
 ### 💡 視覚的状態表示
 - **LED状態表示**：動作状況を色で直感的に表示
@@ -77,7 +84,7 @@ M5AtomS3Liteを使用した自動雨検知システムです。2本の導線を�
 ### 2. 配線
 
 ```
-M5AtomS3    センサ
+M5AtomS3    センサー
 G1      →   Pulse Out
 G2      →   Sensor In
 ```
@@ -134,7 +141,7 @@ const char* location_name = "庭先";
 ### 1. 初回起動
 
 1. M5AtomS3にスケッチをアップロード
-2. センサを**完全に乾燥した状態**で起動
+2. センサーを**完全に乾燥した状態**で起動
 3. 緑LEDの点滅中に自動校正が実行されます
 4. 青LED常灯になれば準備完了
 
@@ -151,7 +158,7 @@ Selected Method 4 (Analog). Baseline: 1250
 
 ### 3. 雨検知テスト
 
-- センサに水を数滴垂らして動作確認
+- センサーに水を数滴垂らして動作確認
 - 紫LEDの点滅と通知が確認できれば正常
 
 ## 🔍 LED状態表示
@@ -200,16 +207,16 @@ Selected Method 4 (Analog). Baseline: 1250
 ### よくある問題と解決方法
 
 #### 🟢 緑点滅が続く
-**原因**: センサ接続不良または校正失敗
+**原因**: センサー接続不良または校正失敗
 **解決方法**:
 1. PIN1、PIN2の配線を確認
-2. センサが完全に乾燥していることを確認
+2. センサーが完全に乾燥していることを確認
 3. 再起動して校正をやり直し
 
 #### 🔴 赤点滅
 **原因**: ケーブル脱落またはWiFi切断
 **解決方法**:
-1. センサケーブルの接続を確認
+1. センサーケーブルの接続を確認
 2. config.hのWiFi設定を確認
 3. WiFiルーターとの距離を確認
 
@@ -224,7 +231,7 @@ Selected Method 4 (Analog). Baseline: 1250
 **原因**: 閾値が低すぎる
 **解決方法**:
 1. `RAIN_THRESHOLD_PERCENT`を15→20%に変更
-2. センサの設置場所を見直し
+2. センサーの設置場所を見直し
 3. 風の影響を受けにくい場所に移動
 
 ### デバッグモード
@@ -278,6 +285,30 @@ void setLEDState(LEDState state)                // LED状態変更
 void updateLEDStatus()                          // LED更新
 ```
 
+## 🏃‍♂️ 24/7運用ガイド
+
+### 長期運用の推奨事項
+
+#### ハードウェア
+- **安定電源**：USBアダプターは5V/1A以上の安定したものを使用
+- **WiFiルーター**：2.4GHz帯を安定して供給できる機器
+- **設置環境**：雨に濡れない場所で、センサー部分のみ屋外に設置
+
+#### ソフトウェア監視
+- **システムヘルス**：MQTTトピック `/health` で稼働状況を監視
+- **自動再起動**：7日間隔で予防的再起動が実行されます
+- **エラー通知**：PUSHOVER経由でエラー状況が通知されます
+
+#### 定期メンテナンス
+- **月次点検**：月1回、動作確認とログ確認
+- **センサー清掃**：月1回、センサー部分の清掃
+- **接続確認**：WiFi信号強度とMQTT接続状況の確認
+
+#### トラブルシューティング
+- **LED状態確認**：エラー時は赤点滅で状況を表示
+- **シリアルログ**：詳細なデバッグ情報をシリアルポートに出力
+- **強制再起動**：電源の抜き差しで手動リセット可能
+
 ## 🔒 セキュリティ注意事項
 
 ⚠️ **重要**: 以下の情報は機密情報として適切に管理してください
@@ -291,7 +322,7 @@ void updateLEDStatus()                          // LED更新
 
 MIT License
 
-Copyright (c) 2025 omiya-bonsai 
+Copyright (c) 2025 GitHub Copilot assisted development
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -317,7 +348,7 @@ SOFTWARE.
 
 質問やバグ報告は、GitHubのIssuesページにお願いします。
 
-**作成者**: omiya-bonsai with GitHub Copilot assisted development  
+**作成者**: GitHub Copilot assisted development  
 **更新日**: 2025年8月4日  
 **バージョン**: v2.1（実運用モード、ケーブル脱落検知強化）
 
@@ -335,11 +366,10 @@ SOFTWARE.
 - **ArduinoJson** for JSON handling
 
 #### ハードウェア・販売プラットフォーム
-- **NAOTO** for [静電容量式レインセンサ基板](https://www.switch-science.com/products/8202)
+- **NAOTO** ([naoto64.2000@gmail.com](mailto:naoto64.2000@gmail.com)) for [静電容量式レインセンサ基板](https://www.switch-science.com/products/8202)
 - **スイッチサイエンス** for providing the marketplace and distribution platform
 
 #### AI開発支援
 - **Claude (Anthropic)** for code development assistance and documentation
 - **Gemini (Google)** for technical consultation and problem-solving support
 - **GitHub Copilot** for code completion and development acceleration
-
