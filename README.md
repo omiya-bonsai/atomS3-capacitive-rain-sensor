@@ -168,7 +168,9 @@ Selected Method 4 (Analog). Baseline: 1250
 | 🟢 緑点滅（200ms） | 起動中・校正中 | しばらく待機 |
 | 🔵 青常灯 | 正常動作（雨なし） | 正常 |
 | 🟣 紫点滅（500ms） | 雨検知中 | 正常（雨検知） |
-| 🔴 赤点滅（300ms） | エラー発生 | 配線・WiFi確認 |
+| 🔴 赤点滅（300ms） | 一般エラー発生 | 配線・センサー確認 |
+| 🟠 オレンジ点滅（400ms） | WiFi接続エラー | WiFi設定・電波確認 |
+| 🟡 黄点滅（350ms） | MQTT接続エラー | MQTTブローカー確認 |
 
 ## 📊 MQTTデータ形式
 
@@ -322,7 +324,7 @@ void updateLEDStatus()                          // LED更新
 
 MIT License
 
-Copyright (c) 2025 GitHub Copilot assisted development
+Copyright (c) 2025 omiya-bonsai
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -348,9 +350,9 @@ SOFTWARE.
 
 質問やバグ報告は、GitHubのIssuesページにお願いします。
 
-**作成者**: GitHub Copilot assisted development  
-**更新日**: 2025年8月4日  
-**バージョン**: v2.1（実運用モード、ケーブル脱落検知強化）
+**作成者**: omiya-bonsai (GitHub Copilot assisted development)  
+**更新日**: 2025年8月6日  
+**バージョン**: v2.2（24/7堅牢運用システム実装）
 
 ---
 
@@ -366,7 +368,7 @@ SOFTWARE.
 - **ArduinoJson** for JSON handling
 
 #### ハードウェア・販売プラットフォーム
-- **NAOTO** ([naoto64.2000@gmail.com](mailto:naoto64.2000@gmail.com)) for [静電容量式レインセンサ基板](https://www.switch-science.com/products/8202)
+- **NAOTO** for [静電容量式レインセンサ基板](https://www.switch-science.com/products/8202)
 - **スイッチサイエンス** for providing the marketplace and distribution platform
 
 #### AI開発支援
