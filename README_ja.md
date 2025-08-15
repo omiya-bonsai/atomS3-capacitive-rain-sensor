@@ -1,7 +1,7 @@
 # English Version
 
-[English Version](README.md)
+For the English version, please visit [README.md](README.md).
 
-# Current Content of README.md
+# (Current Japanese Content from README.md)
 
-<content from README.md here>
+...
