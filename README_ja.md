@@ -1,5 +1,7 @@
-[English Version](link_to_english_version)
+# English Version
 
-# Japanese README Content Here
+[English Version](README.md)
 
-Original Japanese content of the README goes here.
+# Current Content of README.md
+
+<content from README.md here>
