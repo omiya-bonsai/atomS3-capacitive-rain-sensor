@@ -1,82 +1,85 @@
-# AtomS3Lite 2端子静電容量式レインセンサー
+# AtomS3 Lite Two‑Terminal Capacitive Rain Sensor
+> 🌐 This document is also available in **Japanese**: [README_ja.md](./README_ja.md)
 
-M5AtomS3を使用した自動雨検知システムです。2本の導線を使った静電容量式センサーで雨を検知し、MQTT通信とPushover通知によってリアルタイムで雨情報をお知らせします。
 
-![雨検知システム](https://img.shields.io/badge/Status-Production%20Ready-green) ![Arduino](https://img.shields.io/badge/Platform-Arduino-blue) ![ESP32](https://img.shields.io/badge/MCU-ESP32--S3-orange)
+An automatic rain detection system built with **M5AtomS3**.  
+It detects rainfall using a **two‑wire capacitive sensor** and delivers real‑time updates via **MQTT** and **Pushover** notifications.
+
+![Rain Detection System](https://img.shields.io/badge/Status-Production%20Ready-green) ![Arduino](https://img.shields.io/badge/Platform-Arduino-blue) ![ESP32](https://img.shields.io/badge/MCU-ESP32--S3-orange)
 
 <img width="501" height="502" alt="a" src="https://github.com/user-attachments/assets/28650388-753e-4202-bfaa-a2e7c17a6d79" />
 
 
-## 📋 目次
+## 📋 Table of Contents
 
-- [特徴](#特徴)
-- [ハードウェア要件](#ハードウェア要件)
-- [セットアップ](#セットアップ)
-- [設定](#設定)
-- [使用方法](#使用方法)
-- [LED状態表示](#led状態表示)
-- [トラブルシューティング](#トラブルシューティング)
-- [APIリファレンス](#apiリファレンス)
-- [ライセンス](#ライセンス)
+- [Features](#-features)
+- [Hardware Requirements](#-hardware-requirements)
+- [Setup](#-setup)
+- [Configuration](#-configuration)
+- [Usage](#-usage)
+- [LED Status](#-led-status)
+- [Troubleshooting](#-troubleshooting)
+- [API Reference](#-api-reference)
+- [License](#-license)
 
-## ✨ 特徴
+## ✨ Features
 
-### 🌧️ 高精度雨検知
-- **4つの測定方式**を自動選択して最適な検知性能を実現
-- **動的ベースライン調整**で環境変化に自動適応
-- **誤検出防止**：3回連続検出による安定化フィルター
-- **ノイズ除去**：ローパスフィルター（α=0.8）とノイズ閾値（5%）
+### 🌧️ High‑Accuracy Rain Detection
+- **Four measurement methods** are auto‑selected for optimal detection performance.
+- **Dynamic baseline adjustment** adapts to environmental changes.
+- **False‑positive suppression:** requires **3 consecutive detections** to confirm rain.
+- **Noise mitigation:** low‑pass filter (α = 0.8) and **noise threshold (5%)**.
 
-### 📡 IoT通信機能
-- **MQTT通信**：30秒間隔でセンサーデータを送信
-- **Pushover通知**：スマートフォンへリアルタイム通知
-- **時間制御**：07:00-19:00の時間帯のみ通知（近隣配慮）
-- **クールダウン**：3時間間隔で通知頻度を制限
+### 📡 IoT Communications
+- **MQTT publishing:** sends sensor data at **30‑second** intervals.
+- **Pushover notifications:** real‑time alerts to your smartphone.
+- **Time window control:** sends notifications **only 07:00–19:00** (neighbor‑friendly).
+- **Cooldown:** rate‑limits alerts with a **3‑hour cooldown**.
 
-### 🔧 エラー検知・監視
-- **ケーブル脱落検知**：5回連続エラーで自動検出
-- **WiFi接続監視**：切断時の自動再接続
-- **バッテリー監視**：25時間稼働後の警告通知
-- **NTP時刻同期**：正確な時刻制御
+### 🔧 Error Detection & Monitoring
+- **Cable disconnection detection:** automatically flags after **5 consecutive errors**.
+- **Wi‑Fi link monitor:** auto‑reconnect on disconnect.
+- **Battery/runtime monitor:** warning after **25 hours** of continuous operation.
+- **NTP time sync** for accurate timekeeping.
 
-### 🔒 24/7堅牢運用機能
-- **ソフトウェアウォッチドッグ**：120秒無応答で自動再起動
-- **定期再起動**：7日間隔での予防的再起動
-- **メモリ監視**：メモリ不足の自動検出（8KB閾値）
-- **接続監視**：WiFi/MQTT切断回数の監視と自動復旧
-- **システムヘルスレポート**：1時間間隔での稼働状況送信
-- **エラー閾値管理**：接続エラー10回で強制再起動
+### 🔒 24/7 Robust Operation
+- **Software watchdog:** auto‑reboot after **120 s** of no response.
+- **Periodic reboot:** preventive reboot every **7 days**.
+- **Memory monitor:** low‑memory auto‑detection (**8 KB threshold**).
+- **Connectivity watchdog:** tracks Wi‑Fi/MQTT disconnect counts and restores service.
+- **System health reports:** status pushed **hourly**.
+- **Error threshold policy:** force reboot after **10 connection errors**.
 
-### 💡 視覚的状態表示
-- **LED状態表示**：動作状況を色で直感的に表示
-  - 🟢 緑点滅：起動中・校正中
-  - 🔵 青常灯：正常動作
-  - 🟣 紫点滅：雨検知中
-  - 🔴 赤点滅：エラー発生
+### 💡 Visual Status Indication
+- **LED status colors** provide quick insight:
+  - 🟢 **Green blinking:** booting / calibrating
+  - 🔵 **Solid blue:** normal operation
+  - 🟣 **Purple blinking:** rain detected
+  - 🔴 **Red blinking:** error
 
-## 🛠️ ハードウェア要件
+## 🛠️ Hardware Requirements
 
-### 必須コンポーネント
-- **M5AtomS3 Lite**（ESP32-S3搭載）
-- **静電容量式レインセンサ基板**（[NAOTO-001](https://www.switch-science.com/products/8202) - Switch Science）
-- **GROVE/Dupontケーブル**（PIN1/PIN2接続用）
-- **防水ケース**（屋外設置用）
+### Required Components
+- **M5AtomS3 Lite** (ESP32‑S3)
+- **Capacitive rain sensor PCB** ([NAOTO‑001](https://www.switch-science.com/products/8202) — Switch Science)
+- **GROVE/Dupont cables** (connect to PIN1/PIN2)
+- **Weatherproof enclosure** (for outdoor installation)
 
-### 推奨環境
-- **WiFi環境**：2.4GHz帯対応
-- **電源**：USB-C または バッテリー（25時間連続動作）
-- **設置場所**：雨が直接当たる屋外環境
+### Recommended Environment
+- **Wi‑Fi:** 2.4 GHz
+- **Power:** USB‑C or battery (**~25 hours** continuous operation)
+- **Location:** outdoor site directly exposed to rain
 
-## 🚀 セットアップ
+## 🚀 Setup
 
-### 1. 開発環境の準備
+### 1. Prepare the Development Environment
 
 ```bash
-# Arduino IDEまたはPlatformIOを使用
-# 必要なライブラリをインストール
+# Use Arduino IDE or PlatformIO
+# Install the required libraries
 ```
 
-**必要なライブラリ:**
+**Required libraries**
 - M5AtomS3
 - WiFi
 - PubSubClient
@@ -84,74 +87,74 @@ M5AtomS3を使用した自動雨検知システムです。2本の導線を使�
 - ArduinoJson
 - FastLED
 
-### 2. 配線
+### 2. Wiring
 
 ```
-M5AtomS3    センサー
-G1      →   Pulse Out
-G2      →   Sensor In
+M5AtomS3       Sensor
+G1         →   Pulse Out
+G2         →   Sensor In
 ```
 
-### 3. ファイル構成
+### 3. Project Structure
 
 ```
 rain_sensor/
-├── rain_sensor.ino      # メインスケッチ
-├── config.h             # 設定ファイル（要作成）
-├── config.example.h     # 設定サンプル
-└── README.md           # このファイル
+├── rain_sensor.ino      # Main sketch
+├── config.h             # Your settings (create this)
+├── config.example.h     # Example settings
+└── README.md            # This document
 ```
 
-## ⚙️ 設定
+## ⚙️ Configuration
 
-### config.hファイルの作成
+### Create `config.h`
 
-`config.example.h`をコピーして`config.h`を作成し、あなたの環境に合わせて設定してください：
+Copy `config.example.h` to `config.h` and edit for your environment:
 
 ```cpp
-// WiFi設定
-const char* ssid = "あなたのWiFi_SSID";
-const char* password = "あなたのWiFiパスワード";
+// Wi‑Fi
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
 
-// MQTT設定
-const char* mqtt_server = "192.168.1.100";  // MQTTブローカーのIP
+// MQTT
+const char* mqtt_server = "192.168.1.100";  // MQTT broker IP
 const int mqtt_port = 1883;
 const char* mqtt_topic = "sensors/rain";
 const char* mqtt_client_id = "rain_sensor_01";
 
-// Pushover設定
-const char* pushover_api_token = "あなたのAPIトークン";
-const char* pushover_user_key = "あなたのユーザーキー";
+// Pushover
+const char* pushover_api_token = "YOUR_API_TOKEN";
+const char* pushover_user_key = "YOUR_USER_KEY";
 
-// 位置情報（オプション）
-const char* location_name = "庭先";
+// Location (optional)
+const char* location_name = "Garden";
 ```
 
-### 設定パラメータ
+### Configuration Parameters
 
-| パラメータ | デフォルト値 | 説明 |
-|-----------|-------------|------|
-| `RAIN_THRESHOLD_PERCENT` | 15.0% | 雨検知の閾値 |
-| `NOISE_THRESHOLD` | 5.0% | ノイズ除去の閾値 |
-| `STABILITY_CHECK_COUNT` | 3回 | 連続検出回数 |
-| `MQTT_SEND_INTERVAL` | 30秒 | MQTT送信間隔 |
-| `PUSHOVER_START_HOUR` | 7時 | 通知開始時刻 |
-| `PUSHOVER_END_HOUR` | 19時 | 通知終了時刻 |
-| `PUSHOVER_COOLDOWN_HOURS` | 3時間 | 通知クールダウン |
+| Parameter | Default | Description |
+|---|---:|---|
+| `RAIN_THRESHOLD_PERCENT` | 15.0% | Threshold for rain detection |
+| `NOISE_THRESHOLD` | 5.0% | Noise rejection threshold |
+| `STABILITY_CHECK_COUNT` | 3 | Required consecutive detections |
+| `MQTT_SEND_INTERVAL` | 30 s | MQTT publishing interval |
+| `PUSHOVER_START_HOUR` | 7 | Notification start hour |
+| `PUSHOVER_END_HOUR` | 19 | Notification end hour |
+| `PUSHOVER_COOLDOWN_HOURS` | 3 h | Notification cooldown window |
 
-## 📱 使用方法
+## 📱 Usage
 
-### 1. 初回起動
+### 1. First Boot
 
-1. M5AtomS3にスケッチをアップロード
-2. センサーを**完全に乾燥した状態**で起動
-3. 緑LEDの点滅中に自動校正が実行されます
-4. 青LED常灯になれば準備完了
+1. Upload the sketch to the M5AtomS3.
+2. Power on with the sensor **completely dry**.
+3. During **green blinking**, automatic calibration runs.
+4. When the LED turns **solid blue**, the system is ready.
 
-### 2. 動作確認
+### 2. Operation Check
 
 ```
-シリアルモニター出力例:
+Serial monitor example:
 === Testing measurement methods ===
 Method 1: Capacitance charge time (PIN1->PIN2)
 Method 4: Analog difference
@@ -159,25 +162,25 @@ Selected Method 4 (Analog). Baseline: 1250
 === Calibration complete - System ready ===
 ```
 
-### 3. 雨検知テスト
+### 3. Rain Detection Test
 
-- センサーに水を数滴垂らして動作確認
-- 紫LEDの点滅と通知が確認できれば正常
+- Drip a few drops of water on the sensor to verify detection.
+- **Purple blinking** and a notification confirm normal behavior.
 
-## 🔍 LED状態表示
+## 🔍 LED Status
 
-| LED状態 | 動作状況 | 対処法 |
-|---------|----------|--------|
-| 🟢 緑点滅（200ms） | 起動中・校正中 | しばらく待機 |
-| 🔵 青常灯 | 正常動作（雨なし） | 正常 |
-| 🟣 紫点滅（500ms） | 雨検知中 | 正常（雨検知） |
-| 🔴 赤点滅（300ms） | 一般エラー発生 | 配線・センサー確認 |
-| 🟠 オレンジ点滅（400ms） | WiFi接続エラー | WiFi設定・電波確認 |
-| 🟡 黄点滅（350ms） | MQTT接続エラー | MQTTブローカー確認 |
+| LED State | Meaning | Action |
+|---|---|---|
+| 🟢 Green blinking (200 ms) | Booting / calibrating | Wait |
+| 🔵 Solid blue | Normal (no rain) | — |
+| 🟣 Purple blinking (500 ms) | Rain detected | — |
+| 🔴 Red blinking (300 ms) | General error | Check wiring/sensor |
+| 🟠 Orange blinking (400 ms) | Wi‑Fi error | Check Wi‑Fi settings/signal |
+| 🟡 Yellow blinking (350 ms) | MQTT error | Check broker |
 
-## 📊 MQTTデータ形式
+## 📊 MQTT Payload
 
-30秒間隔で以下のJSONデータを送信：
+Sends the following JSON every **30 seconds**:
 
 ```json
 {
@@ -194,143 +197,141 @@ Selected Method 4 (Analog). Baseline: 1250
 }
 ```
 
-### データフィールド説明
+### Field Descriptions
 
-- `id`: デバイスID
-- `baseline`: ベースライン値（乾燥時の基準値）
-- `current`: 現在の測定値
-- `change`: 変化率（%）
-- `rain`: 雨検知状態（true/false）
-- `method`: 使用中の測定方式（1-4）
-- `uptime`: 稼働時間（時間）
-- `cable_ok`: ケーブル接続状態
-- `errors`: 連続エラー回数
-- `timestamp`: UNIX時刻（日本時間）
+- `id`: Device ID  
+- `baseline`: Baseline (dry reference)  
+- `current`: Current measurement  
+- `change`: Percent change (%)  
+- `rain`: Rain state (true/false)  
+- `method`: Measurement method in use (1–4)  
+- `uptime`: Hours since boot  
+- `cable_ok`: Cable connection status  
+- `errors`: Consecutive error count  
+- `timestamp`: UNIX epoch (JST)
 
-## 🔧 トラブルシューティング
+## 🔧 Troubleshooting
 
-### よくある問題と解決方法
+### Common Issues
 
-#### 🟢 緑点滅が続く
-**原因**: センサー接続不良または校正失敗
-**解決方法**:
-1. PIN1、PIN2の配線を確認
-2. センサーが完全に乾燥していることを確認
-3. 再起動して校正をやり直し
+#### 🟢 Green blinking does not stop
+**Cause:** Sensor wiring issue or calibration failure  
+**Fix:**
+1. Verify wiring for PIN1 and PIN2.
+2. Ensure the sensor is **completely dry**.
+3. Reboot to re‑run calibration.
 
-#### 🔴 赤点滅
-**原因**: ケーブル脱落またはWiFi切断
-**解決方法**:
-1. センサーケーブルの接続を確認
-2. config.hのWiFi設定を確認
-3. WiFiルーターとの距離を確認
+#### 🔴 Red blinking
+**Cause:** Cable disconnection or Wi‑Fi drop  
+**Fix:**
+1. Check the sensor cable connection.
+2. Recheck Wi‑Fi settings in `config.h`.
+3. Check distance to the Wi‑Fi router.
 
-#### 通知が来ない
-**原因**: 時間帯制限またはPushover設定エラー
-**解決方法**:
-1. 現在時刻が07:00-19:00の範囲内か確認
-2. Pushover API token/User keyを確認
-3. 3時間のクールダウン時間を確認
+#### No notifications received
+**Cause:** Time window or Pushover configuration  
+**Fix:**
+1. Confirm current time is **07:00–19:00**.
+2. Verify Pushover API token/User key.
+3. Remember the **3‑hour cooldown**.
 
-#### 誤検知が多い
-**原因**: 閾値が低すぎる
-**解決方法**:
-1. `RAIN_THRESHOLD_PERCENT`を15→20%に変更
-2. センサーの設置場所を見直し
-3. 風の影響を受けにくい場所に移動
+#### Many false positives
+**Cause:** Threshold too low  
+**Fix:**
+1. Increase `RAIN_THRESHOLD_PERCENT` from **15 → 20%**.
+2. Reconsider the installation location.
+3. Move the sensor to a spot less affected by wind.
 
-### デバッグモード
+### Debug Mode
 
-開発・テスト時は以下のフラグを有効化：
+Enable these flags during development/testing:
 
 ```cpp
-#define DEBUG_IGNORE_TIME_LIMITS true   // 時刻制限を無視
-#define DEBUG_SHORT_COOLDOWN true       // 1分クールダウン
+#define DEBUG_IGNORE_TIME_LIMITS true   // Ignore time window
+#define DEBUG_SHORT_COOLDOWN true       // 1‑minute cooldown
 ```
 
-## 🌐 応用例
+## 🌐 Example Use Cases
 
-### 農業用途
-- **自動散水システム**: 雨検知時の散水停止
-- **温室管理**: 換気制御との連携
-- **作物保護**: 降雨予測との組み合わせ
+### Agriculture
+- **Automatic irrigation:** pause watering when rain is detected
+- **Greenhouse control:** integrate with ventilation
+- **Crop protection:** combine with rainfall forecasts
 
-### 家庭用途
-- **洗濯物通知**: 雨検知時の取り込み促進
-- **窓閉め通知**: 外出時の雨対策
-- **ガーデニング**: 水やりタイミングの最適化
+### Home
+- **Laundry alerts:** bring clothes in when it starts raining
+- **Window reminders:** close windows when away
+- **Gardening:** optimize watering timing
 
-### 施設管理
-- **屋外イベント**: 雨対策の判断支援
-- **建設現場**: 作業中止判断の補助
-- **気象観測**: 簡易雨量計としての活用
+### Facilities
+- **Outdoor events:** assist rain‑contingency decisions
+- **Construction sites:** support stop/go decisions
+- **Weather observation:** use as a simple rain gauge
 
-## 📚 APIリファレンス
+## 📚 API Reference
 
-### 主要関数
-
-#### 測定関数
+### Core Measurement Functions
 ```cpp
-unsigned long measureCapacitanceChargeTime()    // 充電時間測定
-unsigned long measureCapacitanceReverse()       // 逆方向測定
-unsigned long measureOscillation()              // 発振検出
-unsigned long measureAnalogDifference()         // アナログ測定
+unsigned long measureCapacitanceChargeTime();    // Charge time
+unsigned long measureCapacitanceReverse();       // Reverse direction
+unsigned long measureOscillation();              // Oscillation detection
+unsigned long measureAnalogDifference();         // Analog method
 ```
 
-#### 通信関数
+### Communications
 ```cpp
-void sendMQTTData()                             // MQTT送信
-void sendPushoverNotification(message, title)   // Pushover通知
-bool isNotificationTime()                       // 時刻チェック
+void sendMQTTData();                             // MQTT publish
+void sendPushoverNotification(message, title);   // Pushover alert
+bool isNotificationTime();                       // Time‑window check
 ```
 
-#### LED制御
+### LED Control
 ```cpp
-void setLEDState(LEDState state)                // LED状態変更
-void updateLEDStatus()                          // LED更新
+void setLEDState(LEDState state);                // Change LED state
+void updateLEDStatus();                          // Refresh LED
 ```
 
-## 🏃‍♂️ 24/7運用ガイド
+## 🏃‍♂️ 24/7 Operations Guide
 
-### 長期運用の推奨事項
+### Long‑Term Operation Recommendations
 
-#### ハードウェア
-- **安定電源**：USBアダプターは5V/1A以上の安定したものを使用
-- **WiFiルーター**：2.4GHz帯を安定して供給できる機器
-- **設置環境**：雨に濡れない場所で、センサー部分のみ屋外に設置
+#### Hardware
+- **Stable power:** USB adapter ≥ **5 V / 1 A**
+- **Wi‑Fi AP:** reliable 2.4 GHz coverage
+- **Installation:** keep the device sheltered; expose only the sensor to rain
 
-#### ソフトウェア監視
-- **システムヘルス**：MQTTトピック `/health` で稼働状況を監視
-- **自動再起動**：7日間隔で予防的再起動が実行されます
-- **エラー通知**：PUSHOVER経由でエラー状況が通知されます
+#### Software Monitoring
+- **System health:** monitor MQTT topic **`/health`**
+- **Auto reboot:** preventive reboot occurs every **7 days**
+- **Error alerts:** reported via **Pushover**
 
-#### 定期メンテナンス
-- **月次点検**：月1回、動作確認とログ確認
-- **センサー清掃**：月1回、センサー部分の清掃
-- **接続確認**：WiFi信号強度とMQTT接続状況の確認
+#### Routine Maintenance
+- **Monthly check:** verify operation and review logs
+- **Sensor cleaning:** clean the sensor monthly
+- **Connectivity check:** confirm Wi‑Fi signal and MQTT broker status
 
-#### トラブルシューティング
-- **LED状態確認**：エラー時は赤点滅で状況を表示
-- **シリアルログ**：詳細なデバッグ情報をシリアルポートに出力
-- **強制再起動**：電源の抜き差しで手動リセット可能
+#### Troubleshooting Aids
+- **LED states:** red blinking indicates error conditions
+- **Serial logs:** detailed debug output over serial
+- **Forced reboot:** power‑cycle to reset manually
 
-## 🔒 セキュリティ注意事項
+## 🔒 Security Notes
 
-⚠️ **重要**: 以下の情報は機密情報として適切に管理してください
+⚠️ **Important:** Handle the following as confidential:
 
-- **config.h**: WiFiパスワード、APIキーを含む
-- **GitHubアップロード時**: .gitignoreにconfig.hを追加
-- **MQTTブローカー**: 適切なアクセス制御を設定
-- **Pushover**: API tokenとUser keyの厳重管理
+- **`config.h`** contains Wi‑Fi passwords and API keys
+- **GitHub:** add `config.h` to `.gitignore` before pushing
+- **MQTT broker:** enforce proper access control
+- **Pushover:** protect API tokens and user keys
 
-## 📄 ライセンス
+## 📄 License
 
 MIT License
 
 Copyright (c) 2025 omiya-bonsai
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
+of this software and associated documentation files (the \"Software\"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -339,7 +340,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -349,32 +350,32 @@ SOFTWARE.
 
 ---
 
-## 📞 サポート
+## 📞 Support
 
-質問やバグ報告は、GitHubのIssuesページにお願いします。
+Please open an issue on the GitHub Issues page for questions or bug reports.
 
-**作成者**: omiya-bonsai (GitHub Copilot assisted development)  
-**更新日**: 2025年8月6日  
-**バージョン**: v2.2（24/7堅牢運用システム実装）
+**Author:** omiya-bonsai (with GitHub Copilot assistance)  
+**Last Updated:** August 6, 2025  
+**Version:** v2.2 (24/7 robust operations implemented)
 
 ---
 
-### 🙏 謝辞
+### 🙏 Acknowledgements
 
-このプロジェクトは、オープンソースコミュニティの多くのライブラリとツールの恩恵を受けています。特に以下のプロジェクトと制作者の方々に感謝いたします：
+This project benefits from many open‑source libraries and tools. Special thanks to:
 
-#### オープンソースライブラリ・プラットフォーム
-- **M5Stack team** for M5AtomS3 library
+#### Open‑Source Libraries & Platforms
+- **M5Stack team** for the M5AtomS3 library
 - **Arduino community** for ESP32 support
 - **FastLED project** for LED control
 - **PubSubClient** for MQTT communication
 - **ArduinoJson** for JSON handling
 
-#### ハードウェア・販売プラットフォーム
-- **NAOTO** for [静電容量式レインセンサ基板](https://www.switch-science.com/products/8202)
-- **スイッチサイエンス** for providing the marketplace and distribution platform
+#### Hardware & Marketplace
+- **NAOTO** for the [capacitive rain sensor PCB](https://www.switch-science.com/products/8202)
+- **Switch Science** for providing the marketplace and distribution platform
 
-#### AI開発支援
-- **Claude (Anthropic)** for code development assistance and documentation
-- **Gemini (Google)** for technical consultation and problem-solving support
+#### AI Assistance
+- **Claude (Anthropic)** for development and documentation assistance
+- **Gemini (Google)** for technical consultation and problem‑solving support
 - **GitHub Copilot** for code completion and development acceleration
