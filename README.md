@@ -9,9 +9,6 @@ It detects rainfall using a **two‑wire capacitive sensor** and delivers real�
 
 <img width="501" height="502" alt="a" src="https://github.com/user-attachments/assets/28650388-753e-4202-bfaa-a2e7c17a6d79" />
 
-![IMG_7593](https://github.com/user-attachments/assets/dde78c46-e2de-4a08-9e9f-bb1ce7493e10)
-
-
 
 ## 📋 Table of Contents
 
