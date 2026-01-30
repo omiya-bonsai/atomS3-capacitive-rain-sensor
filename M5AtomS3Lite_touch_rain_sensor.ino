@@ -134,13 +134,7 @@
 #include <FastLED.h>
 #include "config.h"
 
-#define SENSOR_PIN1 1 // センサー端子1
-#define SENSOR_PIN2 2 // センサー端子2
-
-// FASTLED設定
-#define LED_PIN 35        // M5AtomS3の内蔵LED（WS2812）
-#define NUM_LEDS 1        // LEDの数
-#define LED_BRIGHTNESS 50 // LED輝度（0-255）
+// 設定値（しきい値やPIN番号、通知時間など）はすべてconfig.hに集約しています。
 
 CRGB leds[NUM_LEDS];
 
@@ -155,47 +149,12 @@ enum LEDState
   LED_MQTT_ERROR  // MQTTエラー（黄色点滅）
 };
 
-LEDState current_led_state = LED_STARTUP;
-unsigned long last_led_update = 0;
-bool led_blink_state = false;
+// LED制御の内部状態
+LEDState current_led_state = LED_STARTUP; // 現在のLED表示状態
+unsigned long last_led_update = 0;        // 点滅更新タイミング
+bool led_blink_state = false;             // 点滅のON/OFF
 
-#define MEASUREMENT_SAMPLES 20
-#define BASELINE_SAMPLES 15
-#define RAIN_THRESHOLD_PERCENT 15.0 // 閾値を15%に上げて誤検出を減らす
-#define NOISE_THRESHOLD 5.0         // ノイズ閾値も上げる
-#define LOWPASS_ALPHA 0.8
-#define STABILITY_CHECK_COUNT 3              // 安定性チェック用
-#define BASELINE_UPDATE_INTERVAL 30000       // 30秒ごとにベースライン更新
-#define BASELINE_UPDATE_THRESHOLD 10.0       // ベースライン更新の変化率閾値
-#define MQTT_SEND_INTERVAL 30000             // MQTT送信間隔（30秒）
-#define BATTERY_CHECK_HOURS 25               // バッテリーチェック時間（25時間）
-#define PUSHOVER_START_HOUR 7                // PUSHOVER通知開始時刻
-#define PUSHOVER_END_HOUR 19                 // PUSHOVER通知終了時刻
-#define QUIET_START_HOUR 19                  // 静穏時間開始
-#define QUIET_END_HOUR 3                     // 静穏時間終了
-#define DELAY_AFTER_QUIET 1                  // 静穏時間後の遅延（分）
-#define PUSHOVER_COOLDOWN_HOURS 3            // PUSHOVER通知のクールダウン時間（3時間）
-#define CABLE_ERROR_THRESHOLD 5              // ケーブル脱落判定の連続エラー回数
-#define MEASUREMENT_ERROR_THRESHOLD 10       // 測定エラー判定の連続回数
-#define DEBUG_IGNORE_TIME_LIMITS false       // デバッグ用：時刻制限を無視する場合はtrue
-#define DEBUG_SHORT_COOLDOWN false           // デバッグ用：クールダウンを短縮する場合はtrue（1分）
-#define DEBUG_FORCE_RESET_NOTIFICATION false // デバッグ用：毎回通知フラグを強制リセット
-#define DEBUG_MODE false                     // デバッグ出力の有効/無効
-
-// 24/7運用堅牢性設定
-#define WATCHDOG_TIMEOUT_SECONDS 120                // ウォッチドッグタイムアウト（2分）
-#define SCHEDULED_REBOOT_INTERVAL (168UL * 3600000) // 定期再起動間隔（7日間）
-#define MEMORY_CHECK_INTERVAL 300000                // メモリチェック間隔（5分）
-#define MEMORY_WARNING_THRESHOLD 8192               // メモリ警告閾値（8KB）
-#define WIFI_RECONNECT_THRESHOLD 10                 // WiFi再接続エラー閾値
-#define MQTT_RECONNECT_THRESHOLD 10                 // MQTT再接続エラー閾値
-#define HEALTH_REPORT_INTERVAL 3600000              // ヘルスレポート間隔（1時間）
-
-// NTPサーバー設定
-const char *ntpServer = "ntp.nict.jp";
-const long gmtOffset_sec = 9 * 3600; // JST (UTC+9)
-const int daylightOffset_sec = 0;
-
+// ===== センサー状態（測定値・判定結果） =====
 unsigned long baseline_value = 0;
 unsigned long current_value = 0;
 float filtered_change_percent = 0;
@@ -205,24 +164,24 @@ int rain_detection_count = 0;           // 連続検出カウンター
 unsigned long last_baseline_update = 0; // 最後のベースライン更新時刻
 bool baseline_calibrated = false;       // ベースライン校正完了フラグ
 
-// 新機能用変数
+// ===== 通信・通知の状態 =====
 unsigned long last_mqtt_send = 0;    // 最後のMQTT送信時刻
 unsigned long startup_time = 0;      // 起動時刻
 bool rain_notification_sent = false; // 雨通知送信フラグ
 bool battery_warning_sent = false;   // バッテリー警告送信フラグ
 bool cable_error_sent = false;       // ケーブルエラー通知送信フラグ
-bool wifi_connected = false;
+bool wifi_connected = false;         // WiFi接続状態
 
-// PUSHOVER通知のクールダウン管理
+// ===== PUSHOVER通知のクールダウン管理 =====
 unsigned long last_rain_notification = 0;    // 最後の雨通知時刻
 unsigned long last_battery_notification = 0; // 最後のバッテリー通知時刻
 unsigned long last_cable_notification = 0;   // 最後のケーブル通知時刻
 
-// ケーブル脱落検知用
+// ===== ケーブル脱落検知用 =====
 int consecutive_measurement_errors = 0; // 連続測定エラー回数
 bool cable_connection_ok = true;        // ケーブル接続状態
 
-// 24/7堅牢運用のための監視変数
+// ===== 24/7堅牢運用のための監視変数 =====
 unsigned long last_reboot_time = 0;      // 最後の再起動時刻
 unsigned long last_memory_check = 0;     // 最後のメモリチェック時刻
 unsigned long last_health_report = 0;    // 最後のヘルスレポート送信時刻
@@ -230,24 +189,26 @@ unsigned long wifi_disconnect_count = 0; // WiFi切断回数
 unsigned long mqtt_disconnect_count = 0; // MQTT切断回数
 unsigned long system_start_time = 0;     // システム開始時刻
 
-// WiFi・MQTTクライアント
+// ===== 通信クライアント =====
 WiFiClient espClient;
 PubSubClient mqtt_client(espClient);
 
-// MQTTバッファサイズ設定
+// MQTTバッファサイズ設定（大きなJSON送信に備える）
 void setupMQTTBuffers()
 {
   mqtt_client.setBufferSize(512); // バッファサイズを512バイトに設定
   mqtt_client.setKeepAlive(60);   // キープアライブを60秒に設定
 }
 
-// 関数の前方宣言
+// 関数の前方宣言（setup/loopより上に関数名を知らせるため）
 void sendPushoverNotification(const String &message, const String &title);
 bool isNotificationTime();
 unsigned long getUnixTimestamp();
 void connectToMQTT();
+bool isDewTime();
 
 // URLエンコーディングのためのヘルパー関数
+// PUSHOVERのHTTP送信はURLエンコードが必要なため使用します。
 String urlEncode(String str)
 {
   String encodedString = "";
@@ -1318,6 +1279,19 @@ bool isBatteryWarningTime()
   return true; // 静穏時間外なら通知OK
 }
 
+// 夜露・高湿度が出やすい時間帯かチェック
+bool isDewTime()
+{
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo))
+  {
+    return false; // 時刻取得失敗時は通常判定
+  }
+
+  int hour = timeinfo.tm_hour;
+  return (hour >= DEW_START_HOUR && hour < DEW_END_HOUR);
+}
+
 // PUSHOVER通知関数
 void sendPushoverNotification(const String &message, const String &title = "Rain Sensor")
 {
@@ -1716,7 +1690,9 @@ void setup()
 
 void loop()
 {
-  // ===== 24/7 堅牢運用のための監視処理 =====
+  // =====================================================================
+  // 1) 24/7 堅牢運用のための監視処理（異常時の自動復帰）
+  // =====================================================================
 
   // ウォッチドッグフィード
   feedWatchdog();
@@ -1744,12 +1720,15 @@ void loop()
     sendSystemHealthReport();
   }
 
-  // ===== 標準センサー処理 =====
+  // =====================================================================
+  // 2) センサー測定と雨判定（ここがメイン処理）
+  // =====================================================================
 
   // LED状態更新（常時）
   updateLEDStatus();
 
   // 選択された測定方法で現在値を取得
+  // 起動時に一番安定した方式を選んでいるので、ここではそれを使う
   switch (selected_method)
   {
   case 1:
@@ -1769,7 +1748,7 @@ void loop()
     break;
   }
 
-  // 測定エラーチェック
+  // 測定エラーチェック（0が返った場合はエラー扱い）
   static unsigned long previous_value = 0;
   static int unstable_measurement_count = 0;
 
@@ -1795,7 +1774,7 @@ void loop()
     }
     else
     {
-      // ケーブル接続チェック
+      // ケーブル接続チェック（ここで異常通知も行う）
       checkCableConnection();
       delay(1000);
       return;
@@ -1851,10 +1830,10 @@ void loop()
     previous_value = current_value; // 次回の比較用に保存
   }
 
-  // ケーブル接続状態チェック
+  // ケーブル接続状態チェック（エラーが続くと通知）
   checkCableConnection();
 
-  // 変化率計算
+  // 変化率計算（ベースラインとの差を百分率で表す）
   float change_percent = 0;
   if (baseline_value > 0 && current_value > 0)
   {
@@ -1862,16 +1841,17 @@ void loop()
     change_percent = ((float)diff / baseline_value) * 100.0;
   }
 
-  // ノイズフィルター
+  // ノイズフィルター（小さすぎる変化は無視）
   if (abs(change_percent) < NOISE_THRESHOLD)
   {
     change_percent = 0;
   }
 
-  // ローパスフィルター
+  // ローパスフィルター（急な変化をなだらかにする）
   filtered_change_percent = LOWPASS_ALPHA * filtered_change_percent + (1.0 - LOWPASS_ALPHA) * change_percent;
 
   // 動的ベースライン調整（雨が検出されていない場合のみ）
+  // センサーの経年変化や温度変化に追従するため
   if (!is_raining && baseline_calibrated &&
       (millis() - last_baseline_update) > BASELINE_UPDATE_INTERVAL)
   {
@@ -1895,10 +1875,19 @@ void loop()
   }
 
   // 雨判定（連続検出による安定化）
-  bool rain_detected = abs(filtered_change_percent) > RAIN_THRESHOLD_PERCENT;
+  // 夜露の時間帯はしきい値を少し厳しくする
+  float effective_threshold = RAIN_THRESHOLD_PERCENT;
+  float significant_ratio = 0.1; // 10%
+  if (isDewTime())
+  {
+    effective_threshold += DEW_EXTRA_THRESHOLD;
+    significant_ratio = 0.15; // 夜露時間帯はより厳しく
+  }
+
+  bool rain_detected = abs(filtered_change_percent) > effective_threshold;
 
   // 追加の安定性チェック：現在値がベースラインから大きく乖離している場合のみ
-  bool significant_change = abs((long)current_value - (long)baseline_value) > (baseline_value * 0.1);
+  bool significant_change = abs((long)current_value - (long)baseline_value) > (baseline_value * significant_ratio);
   rain_detected = rain_detected && significant_change;
 
   if (rain_detected)
@@ -1954,14 +1943,14 @@ void loop()
   Serial.print(", Rain: ");
   Serial.println(is_raining ? "YES" : "NO");
 
-  // MQTT送信（30秒ごと）
+  // MQTT送信（一定間隔）
   if (wifi_connected && (millis() - last_mqtt_send) >= MQTT_SEND_INTERVAL)
   {
     sendMQTTData();
     last_mqtt_send = millis();
   }
 
-  // PUSHOVER雨検知通知（07:00-19:00のみ、3時間クールダウン）
+  // PUSHOVER雨検知通知（時間帯とクールダウンを満たした場合のみ）
   if (is_raining)
   {
     Serial.print("Rain status: is_raining=true, notification_sent=");
@@ -2042,7 +2031,7 @@ void loop()
     }
   }
 
-  // 雨が止んだらフラグリセット
+  // 雨が止んだらフラグリセット（次の雨通知に備える）
   if (!is_raining && rain_notification_sent)
   {
     rain_notification_sent = false;
@@ -2064,56 +2053,59 @@ void loop()
     }
   }
 
-  // バッテリー残量警告（25時間後、独立した3時間クールダウン）
-  unsigned long uptime_hours = (millis() - startup_time) / 3600000;
-  if (uptime_hours >= BATTERY_CHECK_HOURS && !battery_warning_sent && isBatteryWarningTime())
+  // バッテリー残量警告（PUSHOVERは無効化）
+  if (ENABLE_BATTERY_PUSHOVER)
   {
-    unsigned long current_time = millis();
-    unsigned long cooldown_period = DEBUG_SHORT_COOLDOWN ? 60000UL : (PUSHOVER_COOLDOWN_HOURS * 3600000UL);
-    unsigned long time_since_last = current_time - last_battery_notification;
-
-    Serial.println("=== BATTERY WARNING CHECK ===");
-    Serial.print("Uptime: ");
-    Serial.print(uptime_hours);
-    Serial.print(" hours (threshold: ");
-    Serial.print(BATTERY_CHECK_HOURS);
-    Serial.println(" hours)");
-    Serial.print("Battery warning already sent: ");
-    Serial.println(battery_warning_sent ? "YES" : "NO");
-    Serial.print("Time since last battery notification: ");
-    Serial.print(time_since_last / 1000);
-    Serial.print(" sec (required: ");
-    Serial.print(cooldown_period / 1000);
-    Serial.println(" sec)");
-
-    bool cooldown_ok = (time_since_last >= cooldown_period);
-    bool time_ok = isBatteryWarningTime();
-    bool wifi_ok = wifi_connected;
-
-    Serial.print("Battery cooldown check: ");
-    Serial.println(cooldown_ok ? "PASS" : "FAIL");
-    Serial.print("Battery time window check: ");
-    Serial.println(time_ok ? "PASS" : "FAIL");
-    Serial.print("WiFi check: ");
-    Serial.println(wifi_ok ? "PASS" : "FAIL");
-
-    if (cooldown_ok && time_ok && wifi_ok)
+    unsigned long uptime_hours = (millis() - startup_time) / 3600000;
+    if (uptime_hours >= BATTERY_CHECK_HOURS && !battery_warning_sent && isBatteryWarningTime())
     {
-      Serial.println("*** ALL CONDITIONS MET - SENDING BATTERY WARNING ***");
-      String message = "Battery may be low after " + String(uptime_hours) + " hours of operation";
-      sendPushoverNotification(message, "Battery Warning");
-      last_battery_notification = current_time;
-      battery_warning_sent = true;
-      Serial.println("*** BATTERY WARNING SENT ***");
+      unsigned long current_time = millis();
+      unsigned long cooldown_period = DEBUG_SHORT_COOLDOWN ? 60000UL : (PUSHOVER_COOLDOWN_HOURS * 3600000UL);
+      unsigned long time_since_last = current_time - last_battery_notification;
+
+      Serial.println("=== BATTERY WARNING CHECK ===");
+      Serial.print("Uptime: ");
+      Serial.print(uptime_hours);
+      Serial.print(" hours (threshold: ");
+      Serial.print(BATTERY_CHECK_HOURS);
+      Serial.println(" hours)");
+      Serial.print("Battery warning already sent: ");
+      Serial.println(battery_warning_sent ? "YES" : "NO");
+      Serial.print("Time since last battery notification: ");
+      Serial.print(time_since_last / 1000);
+      Serial.print(" sec (required: ");
+      Serial.print(cooldown_period / 1000);
+      Serial.println(" sec)");
+
+      bool cooldown_ok = (time_since_last >= cooldown_period);
+      bool time_ok = isBatteryWarningTime();
+      bool wifi_ok = wifi_connected;
+
+      Serial.print("Battery cooldown check: ");
+      Serial.println(cooldown_ok ? "PASS" : "FAIL");
+      Serial.print("Battery time window check: ");
+      Serial.println(time_ok ? "PASS" : "FAIL");
+      Serial.print("WiFi check: ");
+      Serial.println(wifi_ok ? "PASS" : "FAIL");
+
+      if (cooldown_ok && time_ok && wifi_ok)
+      {
+        Serial.println("*** ALL CONDITIONS MET - SENDING BATTERY WARNING ***");
+        String message = "Battery may be low after " + String(uptime_hours) + " hours of operation";
+        sendPushoverNotification(message, "Battery Warning");
+        last_battery_notification = current_time;
+        battery_warning_sent = true;
+        Serial.println("*** BATTERY WARNING SENT ***");
+      }
+      else
+      {
+        Serial.println("Battery warning blocked by conditions above");
+      }
+      Serial.println("=== END BATTERY WARNING CHECK ===");
     }
-    else
-    {
-      Serial.println("Battery warning blocked by conditions above");
-    }
-    Serial.println("=== END BATTERY WARNING CHECK ===");
   }
 
-  // 表示更新
+  // 表示更新（内蔵LCDの色で簡易表示）
   if (is_raining)
   {
     M5.Lcd.fillScreen(GREEN);
@@ -2124,7 +2116,7 @@ void loop()
     M5.Lcd.fillScreen(BLACK);
   }
 
-  // WiFi接続維持
+  // WiFi接続維持（切断時は再接続）
   if (wifi_connected && WiFi.status() != WL_CONNECTED)
   {
     Serial.println("WiFi disconnected, attempting reconnection...");
@@ -2148,7 +2140,7 @@ void loop()
     }
   }
 
-  // MQTT接続維持
+  // MQTT接続維持（切断時は再接続）
   if (wifi_connected && !mqtt_client.connected())
   {
     Serial.println("MQTT disconnected, attempting reconnection...");
@@ -2156,7 +2148,7 @@ void loop()
     setupMQTT();
   }
 
-  // MQTT loop
+  // MQTT loop（受信処理・キープアライブ）
   if (mqtt_client.connected())
   {
     mqtt_client.loop();

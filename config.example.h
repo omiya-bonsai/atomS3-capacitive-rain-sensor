@@ -29,8 +29,8 @@ const char *mqtt_topic = "sensors/rain/data";  // MQTTトピック名
 // ============================================================================
 // デバイス識別設定
 // ============================================================================
-const char *DEVICE_ID = "rain_sensor_01";      // デバイス識別ID（ヘルスレポートで使用）
-const char *LOCATION = "Garden Sensor";        // センサー設置場所名（ヘルスレポートで使用）
+const char *DEVICE_ID = "rain_sensor_01";            // デバイス識別ID（ヘルスレポートで使用）
+const char *LOCATION = "Garden Sensor";              // センサー設置場所名（ヘルスレポートで使用）
 const char *MQTT_TOPIC_PREFIX = "sensors/rain/data"; // MQTTトピックプレフィックス（ヘルス用）
 
 // ============================================================================
@@ -39,6 +39,75 @@ const char *MQTT_TOPIC_PREFIX = "sensors/rain/data"; // MQTTトピックプレ�
 // PUSHOVERアカウント設定（https://pushover.net/で取得）
 const char *pushover_api_token = "your_app_token_here"; // PUSHOVERアプリトークン（30文字）
 const char *pushover_user_key = "your_user_key_here";   // PUSHOVERユーザーキー（30文字）
+
+// ============================================================================
+// ハードウェア設定
+// ============================================================================
+#define SENSOR_PIN1 1 // センサー端子1
+#define SENSOR_PIN2 2 // センサー端子2
+
+// FASTLED設定
+#define LED_PIN 35        // M5AtomS3の内蔵LED（WS2812）
+#define NUM_LEDS 1        // LEDの数
+#define LED_BRIGHTNESS 50 // LED輝度（0-255）
+
+// ============================================================================
+// 検知・フィルタ設定
+// ============================================================================
+#define MEASUREMENT_SAMPLES 20
+#define BASELINE_SAMPLES 15
+#define RAIN_THRESHOLD_PERCENT 22.0 // 雨判定しきい値（%）
+#define NOISE_THRESHOLD 8.0         // ノイズしきい値（%）
+#define LOWPASS_ALPHA 0.8
+#define STABILITY_CHECK_COUNT 10       // 連続検知回数（秒相当）
+#define BASELINE_UPDATE_INTERVAL 30000 // ベースライン更新間隔（ms）
+#define BASELINE_UPDATE_THRESHOLD 10.0 // ベースライン更新の変化率閾値（%）
+
+// ============================================================================
+// 通信・通知設定
+// ============================================================================
+#define MQTT_SEND_INTERVAL 30000      // MQTT送信間隔（ms）
+#define BATTERY_CHECK_HOURS 25        // バッテリーチェック時間（時間）
+#define PUSHOVER_START_HOUR 7         // PUSHOVER通知開始時刻
+#define PUSHOVER_END_HOUR 19          // PUSHOVER通知終了時刻
+#define QUIET_START_HOUR 19           // 静穏時間開始
+#define QUIET_END_HOUR 3              // 静穏時間終了
+#define DELAY_AFTER_QUIET 1           // 静穏時間後の遅延（分）
+#define PUSHOVER_COOLDOWN_HOURS 3     // PUSHOVER通知のクールダウン時間（時間）
+#define ENABLE_BATTERY_PUSHOVER false // バッテリー通知をPUSHOVERで送信しない
+
+// 夜露・高湿度の時間帯
+#define DEW_START_HOUR 3        // 夜露・高湿度が出やすい時間帯開始
+#define DEW_END_HOUR 6          // 夜露・高湿度が出やすい時間帯終了
+#define DEW_EXTRA_THRESHOLD 5.0 // 夜露時間帯の追加しきい値（%）
+
+// ============================================================================
+// エラー・デバッグ設定
+// ============================================================================
+#define CABLE_ERROR_THRESHOLD 5              // ケーブル脱落判定の連続エラー回数
+#define MEASUREMENT_ERROR_THRESHOLD 10       // 測定エラー判定の連続回数
+#define DEBUG_IGNORE_TIME_LIMITS false       // デバッグ用：時刻制限を無視する場合はtrue
+#define DEBUG_SHORT_COOLDOWN false           // デバッグ用：クールダウンを短縮する場合はtrue（1分）
+#define DEBUG_FORCE_RESET_NOTIFICATION false // デバッグ用：毎回通知フラグを強制リセット
+#define DEBUG_MODE false                     // デバッグ出力の有効/無効
+
+// ============================================================================
+// 24/7運用堅牢性設定
+// ============================================================================
+#define WATCHDOG_TIMEOUT_SECONDS 120                // ウォッチドッグタイムアウト（秒）
+#define SCHEDULED_REBOOT_INTERVAL (168UL * 3600000) // 定期再起動間隔（ms）
+#define MEMORY_CHECK_INTERVAL 300000                // メモリチェック間隔（ms）
+#define MEMORY_WARNING_THRESHOLD 8192               // メモリ警告閾値（bytes）
+#define WIFI_RECONNECT_THRESHOLD 10                 // WiFi再接続エラー閾値
+#define MQTT_RECONNECT_THRESHOLD 10                 // MQTT再接続エラー閾値
+#define HEALTH_REPORT_INTERVAL 3600000              // ヘルスレポート間隔（ms）
+
+// ============================================================================
+// NTP設定
+// ============================================================================
+const char *ntpServer = "ntp.nict.jp";
+const long gmtOffset_sec = 9 * 3600; // JST (UTC+9)
+const int daylightOffset_sec = 0;
 
 // ============================================================================
 // 設定値の説明
